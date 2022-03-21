@@ -117,10 +117,32 @@ app.post("/authen", (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
     const decoded = jwt.verify(token, secretKey);
-    res.json({ status: 200, msg: "Verified" ,decoded});
+    res.json({ status: 200, msg: "Verified", decoded });
   } catch (error) {
     res.json({ status: 404, msg: "Failed" });
   }
+});
+
+app.get("/account", (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, secretKey);
+
+    connection.query(
+      "SELECT * FROM account_info WHERE userId = ?",
+      [decoded.userId],
+      (err, result) => {
+        if (err) {
+          res.json({ status: 404, msg: err });
+        }
+        if (result.length > 0) {
+          res.json({ status: 200, info: result[0] });
+        } else {
+          res.json({ status: 404, msg: "Not found" });
+        }
+      }
+    );
+  } catch (error) {}
 });
 
 app.listen(port, () => {
