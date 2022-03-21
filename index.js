@@ -7,6 +7,7 @@ const bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
 const saltRounds = 10;
 const port = 3001;
+const secretKey = "vanitas";
 
 const app = express();
 app.use(cors());
@@ -91,7 +92,10 @@ app.post("/logged", (req, res) => {
         if (users.length > 0) {
           bcrypt.compare(password, users[0].password, function (err, result) {
             if (result) {
-              res.json({ status: 200, msg: "Logging successfully !" });
+              const token = jwt.sign({ userId: users[0].userId }, secretKey, {
+                expiresIn: "1h",
+              });
+              res.json({ status: 200, msg: "Logging successfully !", token });
             } else {
               res.json({
                 status: 404,
@@ -106,6 +110,16 @@ app.post("/logged", (req, res) => {
     );
   } else {
     res.send("Please enter Username and Password!");
+  }
+});
+
+app.post("/authen", (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, secretKey);
+    res.json({ status: 200, msg: "Verified" ,decoded});
+  } catch (error) {
+    res.json({ status: 404, msg: "Failed" });
   }
 });
 
