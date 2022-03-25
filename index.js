@@ -170,13 +170,11 @@ app.post("/updateinfo", (req, res) => {
 
 app.post("/service", (req, res) => {
   const ship = req.body.ship;
-  const country = req.body.country;
-  const shipment = req.body.shipment;
   const destination = req.body.destination;
-  let a = "OR country = ? OR portShipment = ? OR portDestination = ?";
+  const date = req.body.date;
   connection.query(
-    "SELECT * FROM service WHERE serviceName = ? OR portDestination = ?",
-    [ship, destination],
+    "SELECT * FROM service WHERE serviceName = ? OR portDestination = ? OR date = ?",
+    [ship, destination, date],
     (err, result) => {
       if (err) {
       }
@@ -208,6 +206,8 @@ app.post("/bookingorder", (req, res) => {
   const type = req.body.type;
   const serviceId = req.body.serviceId;
   const token = req.headers.authorization.split(" ")[1];
+  const time = req.body.time;
+  // console.log(container);
   const decoded = jwt.verify(token, secretKey);
   const ft20 = container.filter((d) => d.age == 20);
   const ft40 = container.filter((d) => d.age == 40);
@@ -215,32 +215,56 @@ app.post("/bookingorder", (req, res) => {
   let q20 = 0;
   let q40 = 0;
   let q45 = 0;
-  const status = "pending"
-  if(ft20.length > 0){
+  let price = 0;
+  const status = "pending";
+  
+  if (ft20.length > 0) {
     ft20.map((ft) => {
-      q20 = q20+ parseInt(ft.name);
-    })
+      q20 = q20 + parseInt(ft.name);
+    });
+    price += q20 * 2500;
   }
-  if(ft40.length > 0){
+  if (ft40.length > 0) {
     ft40.map((ft) => {
       q40 = q40 + parseInt(ft.name);
-    })
+    });
+    price += q40 * 4500;
   }
-  if(ft45.length > 0){
+  if (ft45.length > 0) {
     ft45.map((ft) => {
       q45 = q45 + parseInt(ft.name);
-    })
+    });
+    price += q45 * 6000;
   }
 
+  // console.log(price);
   connection.query(
-    "INSERT INTO booking_details (userId , serviceId , containerType ,quantityFT20 , quantityFT40, quantityFT45 , status) VALUES (?,?,?,?,?,?,?)",
-    [decoded.userId,serviceId,type,q20,q40,q45,status],
-    (err,result) => {
-      if(err){
-        res.json({status: 400 , msg : err})
+    "INSERT INTO booking_details (userId , serviceId , containerType ,quantityFT20 , quantityFT40, quantityFT45 ,time,price ,status) VALUES (?,?,?,?,?,?,?,?,?)",
+    [decoded.userId, serviceId, type, q20, q40, q45, time, price, status],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 400, msg: err });
       }
-      if(result){
-        res.json({status: 200, msg: "Booking successfully"})
+      if (result) {
+        res.json({ status: 200, msg: "Booking successfully" });
+      }
+    }
+  );
+});
+
+app.get("/history", (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = jwt.verify(token, secretKey);
+
+  connection.query(
+    "SELECT *, booking_details.status AS bookingStatus FROM booking_details INNER JOIN service ON service.id = booking_details.serviceId  WHERE userId = ? ORDER BY bookingId DESC",
+    [decoded.userId],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 400, msg: err });
+      }
+      if (result) {
+        res.json({ status: 200, result });
       }
     }
   );
