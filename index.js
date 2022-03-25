@@ -30,8 +30,8 @@ const connection = mysql.createConnection({
   database: "cargo",
 });
 
-app.get("/test", (req, res) => {
-  res.send({ status: "200" });
+app.get("/gete", (req, res) => {
+  res.json({ status: "200" });
 });
 
 app.post("/registed", (req, res) => {
@@ -143,6 +143,107 @@ app.get("/account", (req, res) => {
       }
     );
   } catch (error) {}
+});
+
+app.post("/updateinfo", (req, res) => {
+  const firstName = req.body.firstName;
+  const lastName = req.body.lastName;
+  const phoneNum = req.body.phoneNum;
+
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = jwt.verify(token, secretKey);
+
+  connection.query(
+    "UPDATE account_info SET firstName = ? , lastName = ? ,  phoneNum = ? WHERE userId = ?",
+    [firstName, lastName, phoneNum, decoded.userId],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 404, msg: err });
+      }
+      if (result) {
+        // console.log("updated");
+        res.json({ status: 200, msg: "Updated" });
+      }
+    }
+  );
+});
+
+app.post("/service", (req, res) => {
+  const ship = req.body.ship;
+  const country = req.body.country;
+  const shipment = req.body.shipment;
+  const destination = req.body.destination;
+  let a = "OR country = ? OR portShipment = ? OR portDestination = ?";
+  connection.query(
+    "SELECT * FROM service WHERE serviceName = ? OR portDestination = ?",
+    [ship, destination],
+    (err, result) => {
+      if (err) {
+      }
+      if (result) {
+        res.json({ status: 200, msg: "Successfully", result });
+      }
+    }
+  );
+});
+
+app.post("/booking", (req, res) => {
+  const id = req.body.id;
+  connection.query(
+    "SELECT * FROM service WHERE id = ?",
+    [id],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 404, msg: err });
+      }
+      if (result) {
+        res.json({ status: 200, msg: "Success", result });
+      }
+    }
+  );
+});
+
+app.post("/bookingorder", (req, res) => {
+  const container = req.body.container;
+  const type = req.body.type;
+  const serviceId = req.body.serviceId;
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = jwt.verify(token, secretKey);
+  const ft20 = container.filter((d) => d.age == 20);
+  const ft40 = container.filter((d) => d.age == 40);
+  const ft45 = container.filter((d) => d.age == 45);
+  let q20 = 0;
+  let q40 = 0;
+  let q45 = 0;
+  const status = "pending"
+  if(ft20.length > 0){
+    ft20.map((ft) => {
+      q20 = q20+ parseInt(ft.name);
+    })
+  }
+  if(ft40.length > 0){
+    ft40.map((ft) => {
+      q40 = q40 + parseInt(ft.name);
+    })
+  }
+  if(ft45.length > 0){
+    ft45.map((ft) => {
+      q45 = q45 + parseInt(ft.name);
+    })
+  }
+
+  connection.query(
+    "INSERT INTO booking_details (userId , serviceId , containerType ,quantityFT20 , quantityFT40, quantityFT45 , status) VALUES (?,?,?,?,?,?,?)",
+    [decoded.userId,serviceId,type,q20,q40,q45,status],
+    (err,result) => {
+      if(err){
+        res.json({status: 400 , msg : err})
+      }
+      if(result){
+        res.json({status: 200, msg: "Booking successfully"})
+      }
+    }
+  );
 });
 
 app.listen(port, () => {
