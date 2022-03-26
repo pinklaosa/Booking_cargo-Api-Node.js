@@ -1,5 +1,6 @@
 const express = require("express");
 const session = require("express-session");
+const fileUpload = require("express-fileupload");
 const mysql = require("mysql");
 const path = require("path");
 const cors = require("cors");
@@ -11,6 +12,7 @@ const secretKey = "vanitas";
 
 const app = express();
 app.use(cors());
+app.use(fileUpload());
 
 app.use(
   session({
@@ -66,6 +68,7 @@ app.post("/registed", (req, res) => {
             }
           }
         );
+
         connection.query(
           "INSERT INTO account_info (userId , firstName , lastName , email , phoneNum) VALUES (?,?,?,?,?)",
           [userId, firstName, lastName, email, phoneNum],
@@ -172,17 +175,31 @@ app.post("/service", (req, res) => {
   const ship = req.body.ship;
   const destination = req.body.destination;
   const date = req.body.date;
-  connection.query(
-    "SELECT * FROM service WHERE serviceName = ? OR portDestination = ? OR date = ?",
-    [ship, destination, date],
-    (err, result) => {
-      if (err) {
-      }
-      if (result) {
-        res.json({ status: 200, msg: "Successfully", result });
-      }
+  let query = "SELECT * FROM service WHERE 1 = 1 ";
+  let queryData = [];
+  if (ship !== "") {
+    query = query + " AND serviceName = ?";
+    queryData.push(ship);
+  }
+  if (destination !== "") {
+    query = query + " AND portDestination = ?";
+    queryData.push(destination);
+  }
+  if (date !== "NaN-NaN-NaN") {
+    query = query + " AND date = ?";
+    queryData.push(date);
+  }
+
+  // console.log(query);
+  // console.log(queryData);
+
+  connection.query(query, queryData, (err, result) => {
+    if (err) {
     }
-  );
+    if (result) {
+      res.json({ status: 200, msg: "Successfully", result });
+    }
+  });
 });
 
 app.post("/booking", (req, res) => {
@@ -217,7 +234,7 @@ app.post("/bookingorder", (req, res) => {
   let q45 = 0;
   let price = 0;
   const status = "pending";
-  
+
   if (ft20.length > 0) {
     ft20.map((ft) => {
       q20 = q20 + parseInt(ft.name);
@@ -268,6 +285,41 @@ app.get("/history", (req, res) => {
       }
     }
   );
+});
+
+app.post("/uploadpayment", (req, res) => {
+  if (req.files === null) {
+    res.status(400).json({ msg: "No file upload" });
+  }
+  const file = req.files.fileData;
+  file.mv(`${__dirname}/upload/${file.name}.png`, (err) => {
+    if (err) {
+      console.log(err);
+    }
+
+    connection.query(
+      "UPDATE booking_details SET status = ? WHERE bookingId = ?",
+      ["paid", file.name],
+      (err, result) => {
+        if (result) {
+          res.json({
+            status: 200,
+            fileName: file.name,
+            filePath: `/upload/${file.name}.png`,
+          });
+        }
+      }
+    );
+  });
+});
+
+app.get("/imgpayment/:id", (req, res) => {
+  const bookingId = req.params.id;
+  if (bookingId) {
+    res.sendFile(__dirname + "/upload/" + bookingId + ".png");
+  } else {
+    res.json({ status: 403, msg: "Something went wrong!" });
+  }
 });
 
 app.listen(port, () => {
