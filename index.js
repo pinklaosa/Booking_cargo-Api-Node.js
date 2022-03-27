@@ -390,6 +390,21 @@ app.post("/addship", (req, res) => {
   );
 });
 
+app.get("/adminservice",(req,res) => {
+  connection.query(
+    "SELECT * FROM service",
+    [],
+    (err,result) => {
+      if(err){
+        console.log(err);
+      }
+      if(result){
+        res.json({status:200, result})
+      }
+    }
+  )
+})
+
 app.listen(port, () => {
   console.log(`This app listening on port ${port}`);
 });
