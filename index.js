@@ -270,21 +270,35 @@ app.post("/bookingorder", (req, res) => {
 });
 
 app.get("/history", (req, res) => {
-  const token = req.headers.authorization.split(" ")[1];
-  const decoded = jwt.verify(token, secretKey);
-
-  connection.query(
-    "SELECT *, booking_details.status AS bookingStatus FROM booking_details INNER JOIN service ON service.id = booking_details.serviceId  WHERE userId = ? ORDER BY bookingId DESC",
-    [decoded.userId],
-    (err, result) => {
-      if (err) {
-        res.json({ status: 400, msg: err });
+  if (req.headers.authorization) {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, secretKey);
+    connection.query(
+      "SELECT *, booking_details.status AS bookingStatus FROM booking_details INNER JOIN service ON service.id = booking_details.serviceId  WHERE userId = ? ORDER BY bookingId DESC",
+      [decoded.userId],
+      (err, result) => {
+        if (err) {
+          res.json({ status: 400, msg: err });
+        }
+        if (result) {
+          res.json({ status: 200, result });
+        }
       }
-      if (result) {
-        res.json({ status: 200, result });
+    );
+  } else {
+    connection.query(
+      "SELECT *, booking_details.status AS bookingStatus FROM booking_details INNER JOIN service ON service.id = booking_details.serviceId ORDER BY bookingId DESC",
+      [],
+      (err, result) => {
+        if (err) {
+          res.json({ status: 400, msg: err });
+        }
+        if (result) {
+          res.json({ status: 200, result });
+        }
       }
-    }
-  );
+    );
+  }
 });
 
 app.post("/uploadpayment", (req, res) => {
@@ -320,6 +334,60 @@ app.get("/imgpayment/:id", (req, res) => {
   } else {
     res.json({ status: 403, msg: "Something went wrong!" });
   }
+});
+
+app.post("/updatestatus", (req, res) => {
+  const data = req.body.status;
+  if (data.length > 0) {
+    for (let index = 0; index < data.length; index++) {
+      const d = data[index];
+      connection.query(
+        "UPDATE booking_details SET status = ? WHERE bookingId = ?",
+        [d.bookingStatus, d.bookingId],
+        (err, result) => {
+          if (err) {
+            res.json({ status: 400, msg: err });
+          }
+          if (result) {
+            if (index == data.length - 1) {
+              res.send({ status: 200, msg: "Updated" });
+            }
+          }
+        }
+      );
+    }
+  }
+});
+
+app.post("/addship", (req, res) => {
+  const ship = req.body.ship;
+  const shipID = req.body.shipID;
+  const country = req.body.country;
+  const status = req.body.status;
+  const shipment = req.body.shipment;
+  const destination = req.body.destination;
+  const trantime = req.body.trantime;
+  const date = req.body.date;
+  // console.log(ship);
+  // console.log(shipID);
+  // console.log(country);
+  // console.log(status);
+  // console.log(shipment);
+  // console.log(destination);
+  // console.log(trantime);
+  // console.log(date);
+  connection.query(
+    "INSERT INTO service (serviceName,shipId,country,portShipment,portDestination,transactionTime,status,date) VALUES (?,?,?,?,?,?,?,?)",
+    [ship, shipID, country, shipment, destination, trantime, status, date],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 400, msg: err });
+      }
+      if (result) {
+        res.json({ status: 200, msg: "Insert successfully" });
+      }
+    }
+  );
 });
 
 app.listen(port, () => {
