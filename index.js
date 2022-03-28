@@ -175,8 +175,8 @@ app.post("/service", (req, res) => {
   const ship = req.body.ship;
   const destination = req.body.destination;
   const date = req.body.date;
-  let query = "SELECT * FROM service WHERE 1 = 1 ";
-  let queryData = [];
+  let query = "SELECT * FROM service WHERE 1 = 1 AND status = ?";
+  let queryData = ["available"];
   if (ship !== "") {
     query = query + " AND serviceName = ?";
     queryData.push(ship);
@@ -368,14 +368,7 @@ app.post("/addship", (req, res) => {
   const destination = req.body.destination;
   const trantime = req.body.trantime;
   const date = req.body.date;
-  // console.log(ship);
-  // console.log(shipID);
-  // console.log(country);
-  // console.log(status);
-  // console.log(shipment);
-  // console.log(destination);
-  // console.log(trantime);
-  // console.log(date);
+
   connection.query(
     "INSERT INTO service (serviceName,shipId,country,portShipment,portDestination,transactionTime,status,date) VALUES (?,?,?,?,?,?,?,?)",
     [ship, shipID, country, shipment, destination, trantime, status, date],
@@ -390,20 +383,74 @@ app.post("/addship", (req, res) => {
   );
 });
 
-app.get("/adminservice",(req,res) => {
-  connection.query(
-    "SELECT * FROM service",
-    [],
-    (err,result) => {
-      if(err){
-        console.log(err);
+app.get("/adminservice", (req, res) => {
+  connection.query("SELECT * FROM service", [], (err, result) => {
+    if (err) {
+      console.log(err);
+    }
+    if (result) {
+      res.json({ status: 200, result });
+    }
+  });
+});
+
+app.get("/delservice/:id", (req, res) => {
+  const serviceId = req.params.id;
+  if (serviceId) {
+    connection.query(
+      "DELETE FROM service WHERE id = ?",
+      [serviceId],
+      (err, result) => {
+        if (err) {
+          res.json({ status: 400, msg: err });
+        }
+        if (result) {
+          res.json({ status: 200, msg: "Deleted" });
+        }
       }
-      if(result){
-        res.json({status:200, result})
+    );
+  }
+});
+
+app.get("/editservice/:id", (req, res) => {
+  const serviceId = req.params.id;
+  if (serviceId) {
+    connection.query(
+      "SELECT * FROM service WHERE id = ?",
+      [serviceId],
+      (err, result) => {
+        if (result) {
+          res.json({ status: 200, result });
+        }
+      }
+    );
+  }
+});
+
+app.post("/updateservice", (req, res) => {
+  const id = req.body.id;
+  const ship = req.body.ship;
+  const shipID = req.body.shipID;
+  const country = req.body.country;
+  const status = req.body.status;
+  const shipment = req.body.shipment;
+  const destination = req.body.destination;
+  const trantime = req.body.trantime;
+  const date = req.body.date;
+
+  connection.query(
+    "UPDATE service SET serviceName = ? , shipId = ? , country = ?,portShipment = ? ,portDestination =? ,transactionTime = ? , status = ? , date = ? WHERE id = ?",
+    [ship, shipID, country, shipment, destination, trantime, status, date, id],
+    (err, result) => {
+      if (result) {
+        res.json({ status: 200, msg: "Updated" });
+      }
+      if (err) {
+        res.json({ status: 400, msg: err });
       }
     }
-  )
-})
+  );
+});
 
 app.listen(port, () => {
   console.log(`This app listening on port ${port}`);
