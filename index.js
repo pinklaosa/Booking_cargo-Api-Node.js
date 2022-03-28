@@ -224,6 +224,8 @@ app.post("/bookingorder", (req, res) => {
   const serviceId = req.body.serviceId;
   const token = req.headers.authorization.split(" ")[1];
   const time = req.body.time;
+  const priceContainer = req.body.price;
+
   // console.log(container);
   const decoded = jwt.verify(token, secretKey);
   const ft20 = container.filter((d) => d.age == 20);
@@ -233,25 +235,26 @@ app.post("/bookingorder", (req, res) => {
   let q40 = 0;
   let q45 = 0;
   let price = 0;
+
   const status = "pending";
 
   if (ft20.length > 0) {
     ft20.map((ft) => {
       q20 = q20 + parseInt(ft.name);
     });
-    price += q20 * 2500;
+    price += q20 * priceContainer[0].price;
   }
   if (ft40.length > 0) {
     ft40.map((ft) => {
       q40 = q40 + parseInt(ft.name);
     });
-    price += q40 * 4500;
+    price += q40 * priceContainer[1].price;
   }
   if (ft45.length > 0) {
     ft45.map((ft) => {
       q45 = q45 + parseInt(ft.name);
     });
-    price += q45 * 6000;
+    price += q45 * priceContainer[2].price;
   }
 
   // console.log(price);
@@ -447,6 +450,113 @@ app.post("/updateservice", (req, res) => {
       }
       if (err) {
         res.json({ status: 400, msg: err });
+      }
+    }
+  );
+});
+
+app.get("/container", (req, res) => {
+  connection.query("SELECT * FROM container", [], (err, result) => {
+    if (result) {
+      res.json({ status: 200, result });
+    }
+  });
+});
+
+app.post("/updatecontainer", (req, res) => {
+  const { ft20, ft40, ft45 } = req.body;
+  connection.query(
+    "UPDATE container SET price = ? WHERE ft = 20",
+    [ft20],
+    (err, result) => {}
+  );
+  connection.query(
+    "UPDATE container SET price = ? WHERE ft = 40",
+    [ft40],
+    (err, result) => {}
+  );
+  connection.query(
+    "UPDATE container SET price = ? WHERE ft = 45",
+    [ft45],
+    (err, result) => {
+      if(result){
+        res.json({status: 200, msg: "Updated !"})
+      }
+    }
+  );
+
+});
+
+app.post("/adminlogin", (req, res) => {
+  const userId = req.body.userId;
+  const password = req.body.password;
+
+  connection.query(
+    "SELECT * FROM account WHERE userId = ? AND password = ?",
+    [userId, password],
+    (err, result) => {
+      if (result.length > 0) {
+        const token = jwt.sign({ userId: result[0].userId }, secretKey, {
+          expiresIn: "8h",
+        });
+        res.json({ status: 200, token });
+      } else {
+        res.json({ status: 404, msg: "ID/Password wrong" });
+      }
+    }
+  );
+});
+
+app.get("/editorder/:id", (req, res) => {
+  const id = req.params.id;
+  connection.query(
+    "SELECT *, booking_details.status AS bookingStatus FROM booking_details INNER JOIN service ON service.id = booking_details.serviceId  WHERE bookingId = ? ORDER BY bookingId DESC",
+    [id],
+    (err, result) => {
+      if (err) {
+        console.log(err);
+      }
+      if (result) {
+        res.json({ status: 200, result });
+      }
+    }
+  );
+});
+
+app.post("/updateorder", (req, res) => {
+  const {
+    id,
+    ship,
+    country,
+    shipment,
+    destination,
+    type,
+    ft20,
+    ft40,
+    ft45,
+    container,
+  } = req.body;
+
+  let price = 0;
+  if (ft20) {
+    price += ft20 * container[0].price;
+  }
+  if (ft40) {
+    price += ft40 * container[1].price;
+  }
+  if (ft45) {
+    price += ft45 * container[3].price;
+  }
+
+  connection.query(
+    "UPDATE booking_details SET containerType = ? ,quantityFT20 = ?,quantityFT40 =? , quantityFT45 = ? ,price = ? WHERE bookingId = ?",
+    [type, ft20, ft40, ft45, price, id],
+    (err, result) => {
+      if (err) {
+        res.json({ status: 400, msg: err });
+      }
+      if (result) {
+        res.json({ status: 200, msg: "Updated !" });
       }
     }
   );
