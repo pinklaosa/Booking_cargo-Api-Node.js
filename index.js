@@ -463,6 +463,7 @@ app.get("/container", (req, res) => {
   });
 });
 
+
 app.post("/updatecontainer", (req, res) => {
   const { ft20, ft40, ft45 } = req.body;
   connection.query(
@@ -545,7 +546,7 @@ app.post("/updateorder", (req, res) => {
     price += ft40 * container[1].price;
   }
   if (ft45) {
-    price += ft45 * container[3].price;
+    price += ft45 * container[2].price;
   }
 
   connection.query(
